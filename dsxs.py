@@ -1,5 +1,19 @@
 #!/usr/bin/env python2
-import cookielib, optparse, random, re, string, urllib, urllib2, urlparse
+try:
+    import http.cookiejar as cookielib
+except ImportError:
+    import cookielib
+try:
+    import urllib.parse as urlparse
+except ImportError:
+    import urlparse
+try:
+    # For Python 3.0 and later
+    from urllib.request import Request, urlopen, install_opener, build_opener, ProxyHandler
+except ImportError:
+    # Fall back to Python 2's urllib2
+    from urllib2 import Request, urlopen, install_opener, build_opener, ProxyHandler
+import optparse, random, re, string
 
 NAME, VERSION, AUTHOR, LICENSE = "Damn Small XSS Scanner (DSXS) < 100 LoC (Lines of Code)", "0.2h", "Miroslav Stampar (@stamparm)", "Public domain (FREE)"
 
@@ -32,9 +46,9 @@ _headers = {}                                                                   
 
 def _retrieve_content(url, data=None):
     try:
-        req = urllib2.Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in xrange(len(url))), data, _headers)
-        retval = urllib2.urlopen(req, timeout=TIMEOUT).read()
-    except Exception, ex:
+        req = Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in xrange(len(url))), data, _headers)
+        retval = urlopen(req, timeout=TIMEOUT).read()
+    except Exception as ex:
         retval = ex.read() if hasattr(ex, "read") else getattr(ex, "msg", str())
     return retval or ""
 
@@ -48,15 +62,15 @@ def scan_page(url, data=None):
     original = re.sub(DOM_FILTER_REGEX, "", _retrieve_content(url, data))
     dom = max(re.search(_, original) for _ in DOM_PATTERNS)
     if dom:
-        print " (i) page itself appears to be XSS vulnerable (DOM)"
-        print "  (o) ...%s..." % dom.group(0)
+        print(" (i) page itself appears to be XSS vulnerable (DOM)")
+        print("  (o) ...%s..." % dom.group(0))
         retval = True
     try:
         for phase in (GET, POST):
             current = url if phase is GET else (data or "")
             for match in re.finditer(r"((\A|[?&])(?P<parameter>[\w\[\]]+)=)(?P<value>[^&#]*)", current):
                 found, usable = False, True
-                print "* scanning %s parameter '%s'" % (phase, match.group("parameter"))
+                print("* scanning %s parameter '%s'" % (phase, match.group("parameter")))
                 prefix, suffix = ("".join(random.sample(string.ascii_lowercase, PREFIX_SUFFIX_LENGTH)) for i in xrange(2))
                 for pool in (LARGER_CHAR_POOL, SMALLER_CHAR_POOL):
                     if not found:
@@ -68,22 +82,22 @@ def scan_page(url, data=None):
                                 context = re.search(regex % {"chars": re.escape(sample.group(0))}, filtered, re.I)
                                 if context and not found and sample.group(1).strip():
                                     if _contains(sample.group(1), condition):
-                                        print " (i) %s parameter '%s' appears to be XSS vulnerable (%s)" % (phase, match.group("parameter"), info % dict((("filtering", "no" if all(char in sample.group(1) for char in LARGER_CHAR_POOL) else "some"),)))
+                                        print(" (i) %s parameter '%s' appears to be XSS vulnerable (%s)" % (phase, match.group("parameter"), info % dict((("filtering", "no" if all(char in sample.group(1) for char in LARGER_CHAR_POOL) else "some"),))))
                                         found = retval = True
                                     break
         if not usable:
-            print " (x) no usable GET/POST parameters found"
+            print(" (x) no usable GET/POST parameters found")
     except KeyboardInterrupt:
-        print "\r (x) Ctrl-C pressed"
+        print("\r (x) Ctrl-C pressed")
     return retval
 
 def init_options(proxy=None, cookie=None, ua=None, referer=None):
     global _headers
     _headers = dict(filter(lambda _: _[1], ((COOKIE, cookie), (UA, ua or NAME), (REFERER, referer))))
-    urllib2.install_opener(urllib2.build_opener(urllib2.ProxyHandler({'http': proxy})) if proxy else None)
+    install_opener(build_opener(ProxyHandler({'http': proxy})) if proxy else None)
 
 if __name__ == "__main__":
-    print "%s #v%s\n by: %s\n" % (NAME, VERSION, AUTHOR)
+    print("%s #v%s\n by: %s\n" % (NAME, VERSION, AUTHOR))
     parser = optparse.OptionParser(version=VERSION)
     parser.add_option("-u", "--url", dest="url", help="Target URL (e.g. \"http://www.target.com/page.php?id=1\")")
     parser.add_option("--data", dest="data", help="POST data (e.g. \"query=test\")")
@@ -95,6 +109,6 @@ if __name__ == "__main__":
     if options.url:
         init_options(options.proxy, options.cookie, options.ua, options.referer)
         result = scan_page(options.url if options.url.startswith("http") else "http://%s" % options.url, options.data)
-        print "\nscan results: %s vulnerabilities found" % ("possible" if result else "no")
+        print("\nscan results: %s vulnerabilities found" % ("possible" if result else "no"))
     else:
         parser.print_help()
