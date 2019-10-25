@@ -4,7 +4,13 @@ try:
 except ImportError:
     import cookielib
 
-import optparse, random, re, string, urllib, urllib2, urlparse
+try:
+    # For Python 3.0 and later
+    from urllib.request import Request, urlopen, install_opener, build_opener, ProxyHandler
+except ImportError:
+    # Fall back to Python 2's urllib2
+    from urllib2 import Request, urlopen, install_opener, build_opener, ProxyHandler
+import optparse, random, re, string, urlparse
 
 NAME, VERSION, AUTHOR, LICENSE = "Damn Small XSS Scanner (DSXS) < 100 LoC (Lines of Code)", "0.2h", "Miroslav Stampar (@stamparm)", "Public domain (FREE)"
 
@@ -37,8 +43,8 @@ _headers = {}                                                                   
 
 def _retrieve_content(url, data=None):
     try:
-        req = urllib2.Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in xrange(len(url))), data, _headers)
-        retval = urllib2.urlopen(req, timeout=TIMEOUT).read()
+        req = Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in xrange(len(url))), data, _headers)
+        retval = urlopen(req, timeout=TIMEOUT).read()
     except Exception as ex:
         retval = ex.read() if hasattr(ex, "read") else getattr(ex, "msg", str())
     return retval or ""
@@ -85,7 +91,7 @@ def scan_page(url, data=None):
 def init_options(proxy=None, cookie=None, ua=None, referer=None):
     global _headers
     _headers = dict(filter(lambda _: _[1], ((COOKIE, cookie), (UA, ua or NAME), (REFERER, referer))))
-    urllib2.install_opener(urllib2.build_opener(urllib2.ProxyHandler({'http': proxy})) if proxy else None)
+    install_opener(build_opener(ProxyHandler({'http': proxy})) if proxy else None)
 
 if __name__ == "__main__":
     print("%s #v%s\n by: %s\n" % (NAME, VERSION, AUTHOR))
