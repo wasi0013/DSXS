@@ -3,14 +3,17 @@ try:
     import http.cookiejar as cookielib
 except ImportError:
     import cookielib
-
+try:
+    import urllib.parse as urlparse
+except ImportError:
+    import urlparse
 try:
     # For Python 3.0 and later
     from urllib.request import Request, urlopen, install_opener, build_opener, ProxyHandler
 except ImportError:
     # Fall back to Python 2's urllib2
     from urllib2 import Request, urlopen, install_opener, build_opener, ProxyHandler
-import optparse, random, re, string, urlparse
+import optparse, random, re, string, 
 
 NAME, VERSION, AUTHOR, LICENSE = "Damn Small XSS Scanner (DSXS) < 100 LoC (Lines of Code)", "0.2h", "Miroslav Stampar (@stamparm)", "Public domain (FREE)"
 
