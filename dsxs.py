@@ -13,7 +13,7 @@ try:
 except ImportError:
     # Fall back to Python 2's urllib2
     from urllib2 import Request, urlopen, install_opener, build_opener, ProxyHandler
-import optparse, random, re, string, 
+import optparse, random, re, string
 
 NAME, VERSION, AUTHOR, LICENSE = "Damn Small XSS Scanner (DSXS) < 100 LoC (Lines of Code)", "0.2h", "Miroslav Stampar (@stamparm)", "Public domain (FREE)"
 
